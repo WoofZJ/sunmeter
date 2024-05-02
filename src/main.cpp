@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <cmath>
 
 struct AppContext {
@@ -18,7 +19,12 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_Fail();
   }
 
-  SDL_Window *window = SDL_CreateWindow("Window", 352, 430, SDL_WINDOW_RESIZABLE | SDL_WINDOW_BORDERLESS);
+  if (TTF_Init()) {
+    SDL_Log(TTF_GetError());
+    return -1;
+  }
+
+  SDL_Window *window = SDL_CreateWindow("Window", 352, 430, SDL_WINDOW_BORDERLESS);
   if (!window) {
     return SDL_Fail();
   }
@@ -30,6 +36,7 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
   // print some information about the window
   SDL_ShowWindow(window);
+  SDL_SetWindowOpacity(window, 0.9);
   {
     int width, height, bbwidth, bbheight;
     SDL_GetWindowSize(window, &width, &height);
@@ -72,6 +79,9 @@ int SDL_AppEvent(void *appstate, const SDL_Event *event) {
           float x, y;
           SDL_GetGlobalMouseState(&x, &y);
           SDL_Log("Mouse global pos: (%.1f, %.1f)", x, y);
+          SDL_Rect rect;
+          SDL_GetDisplayBounds(1, &rect);
+          SDL_Log("Display size: (%dx%d)", rect.w, rect.h);
         }
       }
       break;
@@ -87,10 +97,25 @@ int SDL_AppEvent(void *appstate, const SDL_Event *event) {
       if (drag) {
         float x, y;
         SDL_GetGlobalMouseState(&x, &y);
-        SDL_SetWindowPosition(app->window, win_x+x-start_x, win_y+y-start_y);
+        SDL_Rect rect;
+        SDL_GetDisplayBounds(1, &rect);
+        int dest_x = win_x+x-start_x, dest_y = win_y+y-start_y;
+        dest_x = (dest_x / (rect.w/15)) * (rect.w/15);
+        dest_y = (dest_y / (rect.h/10)) * (rect.h/10);
+        SDL_SetWindowPosition(app->window, dest_x, dest_y);
       }
       break;
+    
+    case SDL_EVENT_WINDOW_MINIMIZED:
+      SDL_Log("Window minimized!");
+      SDL_Log("state: %d", SDL_GetWindowFlags(app->window) & SDL_WINDOW_MINIMIZED);
+      SDL_RestoreWindow(app->window);
+      break;
 
+    case SDL_EVENT_WINDOW_RESTORED:
+      SDL_Log("Window restored!");
+      SDL_Log("state: %d", SDL_GetWindowFlags(app->window) & SDL_WINDOW_MINIMIZED);
+      break;
   }
 
   return 0;
@@ -98,15 +123,36 @@ int SDL_AppEvent(void *appstate, const SDL_Event *event) {
 
 int SDL_AppIterate(void *appstate) {
     auto* app = (AppContext*)appstate;
-
+    static TTF_Font *font;
+    static SDL_Color color {128, 255, 128, 255};
+    static SDL_Surface* surface = NULL;
+    static SDL_Texture* texture;
+    static SDL_FRect rect {0, 0, 120, 24};
+    if (surface == NULL) {
+      font = TTF_OpenFont("youyuan.TTF", 24);
+      if (!font) {
+        SDL_Log(TTF_GetError());
+        return -1;
+      }
+      surface = TTF_RenderUTF8_Blended(font, "你好", color);
+      if (!surface) {
+        SDL_Log(TTF_GetError());
+        return -1;
+      }
+      rect.w = surface->w;
+      rect.h = surface->h;
+      texture = SDL_CreateTextureFromSurface(app->renderer, surface);
+      if (!texture) {
+        return SDL_Fail();
+      }
+    }
     // draw a color
-    auto time = SDL_GetTicks() / 1000.f;
-    auto red = (std::sin(time) + 1) / 2.0 * 255;
-    auto green = (std::sin(time / 2) + 1) / 2.0 * 255;
-    auto blue = (std::sin(time) * 2 + 1) / 2.0 * 255;
-    
-    SDL_SetRenderDrawColor(app->renderer, red, green, blue, SDL_ALPHA_OPAQUE);
+    rect.x += 1;
+    if (rect.x > 300) {
+      rect.x = 0;
+    }
     SDL_RenderClear(app->renderer);
+    SDL_RenderTexture(app->renderer, texture, NULL, &rect);
     SDL_RenderPresent(app->renderer);
 
     return app->app_quit;
