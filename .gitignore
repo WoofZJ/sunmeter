@@ -1,3 +1,4 @@
 build/
 SDL/
+SDL_ttf/
 output/

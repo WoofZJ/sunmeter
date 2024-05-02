@@ -27,6 +27,7 @@ if (-not (Test-Path -PathType Container "output")) {
 }
 Copy-Item -Path ("build/Debug/{0}.exe" -f $name) -Destination ("output/{0}.exe" -f $name)
 Copy-Item -Path "build/Debug/SDL3.dll" -Destination "output/SDL3.dll"
+Copy-Item -Path "build/Debug/SDL3_ttf.dll" -Destination "output/SDL3_ttf.dll"
 cd output
 . ("./{0}.exe" -f $name)
 if ($?) {
