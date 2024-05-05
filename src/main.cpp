@@ -1,7 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <SDL3_ttf/SDL_ttf.h>
 #include <cmath>
+#include "drag.hpp"
 
 struct AppContext {
   SDL_Window *window;
@@ -19,12 +19,7 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_Fail();
   }
 
-  if (TTF_Init()) {
-    SDL_Log(TTF_GetError());
-    return -1;
-  }
-
-  SDL_Window *window = SDL_CreateWindow("Window", 352, 430, SDL_WINDOW_BORDERLESS);
+  SDL_Window *window = SDL_CreateWindow("Window", 800, 400, SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT);
   if (!window) {
     return SDL_Fail();
   }
@@ -34,9 +29,10 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_Fail();
   }
 
+  SMT_SetDraggable(true);
   // print some information about the window
   SDL_ShowWindow(window);
-  SDL_SetWindowOpacity(window, 0.9);
+  // SDL_SetWindowOpacity(window, 0.9);
   {
     int width, height, bbwidth, bbheight;
     SDL_GetWindowSize(window, &width, &height);
@@ -60,52 +56,14 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
 }
 
 int SDL_AppEvent(void *appstate, const SDL_Event *event) {
-  static bool drag = false;
-  static float start_x, start_y;
-  static int win_x, win_y;
   auto *app = (AppContext *)appstate;
 
   if (event->type == SDL_EVENT_QUIT) {
     app->app_quit = SDL_TRUE;
   }
-  switch (event->type) {
-    case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      if (event->button.button == SDL_BUTTON_LEFT) {
-        SDL_Log("Left button down!");
-        drag = true;
-        SDL_GetWindowPosition(app->window, &win_x, &win_y);
-        SDL_GetGlobalMouseState(&start_x, &start_y);
-        {
-          float x, y;
-          SDL_GetGlobalMouseState(&x, &y);
-          SDL_Log("Mouse global pos: (%.1f, %.1f)", x, y);
-          SDL_Rect rect;
-          SDL_GetDisplayBounds(1, &rect);
-          SDL_Log("Display size: (%dx%d)", rect.w, rect.h);
-        }
-      }
-      break;
 
-    case SDL_EVENT_MOUSE_BUTTON_UP:
-      if (event->button.button == SDL_BUTTON_LEFT) {
-        SDL_Log("Left button up!");
-        drag = false;
-      }
-      break;
-    
-    case SDL_EVENT_MOUSE_MOTION:
-      if (drag) {
-        float x, y;
-        SDL_GetGlobalMouseState(&x, &y);
-        SDL_Rect rect;
-        SDL_GetDisplayBounds(1, &rect);
-        int dest_x = win_x+x-start_x, dest_y = win_y+y-start_y;
-        dest_x = (dest_x / (rect.w/15)) * (rect.w/15);
-        dest_y = (dest_y / (rect.h/10)) * (rect.h/10);
-        SDL_SetWindowPosition(app->window, dest_x, dest_y);
-      }
-      break;
-    
+  __SMT_Drag_ProcessEvent(app->window, event);
+  switch (event->type) {
     case SDL_EVENT_WINDOW_MINIMIZED:
       SDL_Log("Window minimized!");
       SDL_Log("state: %d", SDL_GetWindowFlags(app->window) & SDL_WINDOW_MINIMIZED);
@@ -123,38 +81,24 @@ int SDL_AppEvent(void *appstate, const SDL_Event *event) {
 
 int SDL_AppIterate(void *appstate) {
     auto* app = (AppContext*)appstate;
-    static TTF_Font *font;
-    static SDL_Color color {128, 255, 128, 255};
-    static SDL_Surface* surface = NULL;
-    static SDL_Texture* texture;
+    static SDL_Color color {255, 0, 0, 255};
     static SDL_FRect rect {0, 0, 120, 24};
-    if (surface == NULL) {
-      font = TTF_OpenFont("youyuan.TTF", 24);
-      if (!font) {
-        SDL_Log(TTF_GetError());
-        return -1;
-      }
-      surface = TTF_RenderUTF8_Blended(font, "你好", color);
-      if (!surface) {
-        SDL_Log(TTF_GetError());
-        return -1;
-      }
-      rect.w = surface->w;
-      rect.h = surface->h;
-      texture = SDL_CreateTextureFromSurface(app->renderer, surface);
-      if (!texture) {
-        return SDL_Fail();
-      }
-    }
-    // draw a color
-    rect.x += 1;
-    if (rect.x > 300) {
-      rect.x = 0;
-    }
-    SDL_RenderClear(app->renderer);
-    SDL_RenderTexture(app->renderer, texture, NULL, &rect);
-    SDL_RenderPresent(app->renderer);
+    static auto start = SDL_GetTicks();
+    int w, h;
+    int gap = 20;
+    SDL_GetWindowSize(app->window, &w, &h);
 
+    auto time = SDL_GetTicks();
+
+    SDL_SetRenderDrawColor(app->renderer, 255, 255, 255, 255);
+    SDL_RenderClear(app->renderer);
+    SDL_SetRenderDrawColor(app->renderer, 255, 0, 0, 255);
+    SDL_RenderLine(app->renderer, 0, gap, w, gap);
+    SDL_RenderLine(app->renderer, 0, h-gap, w, h-gap);
+    SDL_SetRenderDrawColor(app->renderer, 0, 0, 255, 255);
+    SDL_RenderLine(app->renderer, gap, 0, gap, h);
+    SDL_RenderLine(app->renderer, w-gap, 0, w-gap, h);
+    SDL_RenderPresent(app->renderer);
     return app->app_quit;
 }
 
