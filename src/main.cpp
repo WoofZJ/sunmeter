@@ -2,6 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include <cmath>
 #include "drag.hpp"
+#include "label.hpp"
 
 struct AppContext {
   SDL_Window *window;
@@ -19,6 +20,11 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_Fail();
   }
 
+  if (TTF_Init()) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, TTF_GetError());
+    return -1;
+  }
+
   SDL_Window *window = SDL_CreateWindow("Window", 800, 400, SDL_WINDOW_BORDERLESS | SDL_WINDOW_TRANSPARENT);
   if (!window) {
     return SDL_Fail();
@@ -29,10 +35,8 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_Fail();
   }
 
-  SMT_SetDraggable(true);
   // print some information about the window
   SDL_ShowWindow(window);
-  // SDL_SetWindowOpacity(window, 0.9);
   {
     int width, height, bbwidth, bbheight;
     SDL_GetWindowSize(window, &width, &height);
@@ -50,6 +54,7 @@ int SDL_AppInit(void **appstate, int argc, char *argv[]) {
       renderer,
   };
 
+  SMT_SetDraggable(true);
   SDL_Log("Application started successfully!");
 
   return 0;
@@ -81,11 +86,12 @@ int SDL_AppEvent(void *appstate, const SDL_Event *event) {
 
 int SDL_AppIterate(void *appstate) {
     auto* app = (AppContext*)appstate;
-    static SDL_Color color {255, 0, 0, 255};
-    static SDL_FRect rect {0, 0, 120, 24};
+    static SDL_Color color {255, 128, 128, 255};
+    static SDL_FRect rect {100, 100, 120, 24};
     static auto start = SDL_GetTicks();
+    static Label label("Hello, world!", 24, rect, color);
     int w, h;
-    int gap = 20;
+    int gap = SMT_GetGap();
     SDL_GetWindowSize(app->window, &w, &h);
 
     auto time = SDL_GetTicks();
@@ -98,6 +104,9 @@ int SDL_AppIterate(void *appstate) {
     SDL_SetRenderDrawColor(app->renderer, 0, 0, 255, 255);
     SDL_RenderLine(app->renderer, gap, 0, gap, h);
     SDL_RenderLine(app->renderer, w-gap, 0, w-gap, h);
+
+    label.render(app->renderer);
+
     SDL_RenderPresent(app->renderer);
     return app->app_quit;
 }
