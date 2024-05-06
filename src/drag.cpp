@@ -2,7 +2,7 @@
 
 static bool smt_draggable, drag, resize;
 static int win_x, win_y, pos_x, pos_y, dir, w, h, size_x, size_y, cur, temp;
-static int gap = SMT_DEFAULT_DRAG_GAP;
+static int smt_gap = SMT_DEFAULT_DRAG_GAP;
 static float start_x, start_y, x, y;
 static SDL_Cursor* cursors[5];
 
@@ -35,14 +35,14 @@ void __SMT_Drag_ProcessEvent(SDL_Window *window, const SDL_Event *event) {
         pos_y = win_y;
         SDL_GetGlobalMouseState(&start_x, &start_y);
         SDL_GetWindowSize(window, &w, &h);
-        if (event->motion.x < gap) {
+        if (event->motion.x <= smt_gap) {
           dir |= 1;
-        } else if (event->motion.x > w-gap) {
+        } else if (event->motion.x >= w-smt_gap) {
           dir |= 2;
         }
-        if (event->motion.y < gap) {
+        if (event->motion.y <= smt_gap) {
           dir |= 4;
-        } else if (event->motion.y > h-gap) {
+        } else if (event->motion.y >= h-smt_gap) {
           dir |= 8;
         }
         if (dir == 0) {
@@ -85,14 +85,14 @@ void __SMT_Drag_ProcessEvent(SDL_Window *window, const SDL_Event *event) {
         SDL_SetWindowPosition(window, pos_x, pos_y);
       } else {
         temp = 0;
-        if (event->motion.x <= gap) {
+        if (event->motion.x <= smt_gap) {
           temp |= 1;
-        } else if (event->motion.x >= w-gap) {
+        } else if (event->motion.x >= w-smt_gap) {
           temp |= 2;
         }
-        if (event->motion.y <= gap) {
+        if (event->motion.y <= smt_gap) {
           temp |= 4;
-        } else if (event->motion.y >= h-gap) {
+        } else if (event->motion.y >= h-smt_gap) {
           temp |= 8;
         }
         if ((temp == 0b1 || temp == 0b10) && cur != 1) {
@@ -118,4 +118,12 @@ void __SMT_Drag_ProcessEvent(SDL_Window *window, const SDL_Event *event) {
       }
       break;
   }
+}
+
+int SMT_GetGap() {
+  return smt_gap;
+}
+
+void SMT_SetGap(int gap) {
+  smt_gap = gap;
 }

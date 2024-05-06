@@ -7,6 +7,9 @@
 
 bool SMT_IsDraggable();
 void SMT_SetDraggable(bool draggble);
+int  SMT_GetGap();
+void SMT_SetGap(int gap);
+
 
 void __SMT_Drag_ProcessEvent(SDL_Window *window, const SDL_Event *event);
 
