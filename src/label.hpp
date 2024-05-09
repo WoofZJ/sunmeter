@@ -12,7 +12,11 @@ public:
   Label(string text, int font_size, SDL_FRect rect, SDL_Color color);
   void setPosition(float x, float y);
   void setText(string text);
+  void setFontSize(int size);
   void render(SDL_Renderer *renderer);
+
+private:
+  void updateContent();
 
 private:
   SDL_FRect rect;

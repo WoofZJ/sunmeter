@@ -4,13 +4,11 @@ Label::Label(string text, int font_size, SDL_FRect rect, SDL_Color color) {
   this->font_size = font_size;
   this->rect = rect;
   this->color = color;
-  this->texture = nullptr;
-  this->surface = nullptr;
+  this->texture = NULL;
+  this->surface = NULL;
 
   font = TTF_OpenFont("Youyuan.ttf", font_size);
   this->setText(text);
-  this->rect.w = surface->w;
-  this->rect.h = surface->h;
 }
 
 void Label::render(SDL_Renderer *renderer) {
@@ -26,7 +24,26 @@ void Label::render(SDL_Renderer *renderer) {
 }
 
 void Label::setText(string text) {
-  this->text = text.empty() ? "---" : text;
+  if (!text.empty()) {
+    this->text = text;
+    updateContent();
+  }
+}
+
+void Label::setPosition(float x, float y) {
+  this->rect.x = x;
+  this->rect.y = y;
+}
+
+void Label::setFontSize(int size) {
+  if (font_size != size) {
+    TTF_SetFontSize(font, size);
+    font_size = size;
+    updateContent();
+  }
+}
+
+void Label::updateContent() {
   if (surface != NULL) {
     SDL_DestroySurface(surface);
   }
@@ -37,7 +54,8 @@ void Label::setText(string text) {
   surface = TTF_RenderUTF8_Blended_Wrapped(font, this->text.c_str(), color, 0);
   if (surface == NULL) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, TTF_GetError());
+  } else {
+    this->rect.w = surface->w;
+    this->rect.h = surface->h;
   }
-  this->rect.w = surface->w;
-  this->rect.h = surface->h;
 }
